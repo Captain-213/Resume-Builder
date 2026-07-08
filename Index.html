@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced ATS-Optimized Resume Builder</title>
+    
+    <link rel="manifest" href="manifest.json">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #0f172a;
+            --secondary: #3b82f6;
+            --bg: #f8fafc;
+            --text: #334155;
+            --border: #cbd5e1;
+            --error: #ef4444;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        }
+
+        h1, h2, h3 { color: var(--primary); }
+        .optional-tag { font-size: 0.8em; color: #94a3b8; font-weight: normal; }
+
+        /* Form Layout */
+        .form-section {
+            background: #f1f5f9;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border: 1px solid var(--border);
+        }
+        .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; }
+        
+        label { display: block; font-weight: 600; margin-bottom: 5px; margin-top: 10px; font-size: 0.9em; }
+        input, textarea, select {
+            width: 100%; padding: 10px; border: 1px solid var(--border);
+            border-radius: 6px; box-sizing: border-box; font-family: inherit;
+        }
+        input:focus, textarea:focus, select:focus {
+            outline: none; border-color: var(--secondary); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        /* Dynamic Groups */
+        .dynamic-group {
+            background: white; padding: 15px; border: 1px dashed var(--border);
+            margin-top: 10px; border-radius: 6px; position: relative;
+        }
+        .remove-btn {
+            position: absolute; top: 10px; right: 10px; background: var(--error);
+            color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer;
+        }
+
+        /* Buttons */
+        .btn {
+            background: var(--secondary); color: white; border: none; padding: 10px 20px;
+            border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s;
+        }
+        .btn:hover { background: #2563eb; }
+        .btn-add { background: #10b981; margin-top: 10px; display: inline-flex; align-items: center; gap: 5px; }
+        .btn-add:hover { background: #059669; }
+        .btn-ai { background: #8b5cf6; font-size: 0.85em; padding: 5px 10px; margin-left: 10px; }
+        .btn-ai:hover { background: #7c3aed; }
+        .btn-submit { width: 100%; font-size: 1.1em; padding: 15px; margin-top: 20px; }
+
+        /* Design Selection */
+        #design-selection, #resume-output-container { display: none; }
+        .design-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 20px; }
+        .card {
+            border: 2px solid var(--border); border-radius: 8px; padding: 20px;
+            text-align: center; cursor: pointer; transition: 0.3s;
+        }
+        .card:hover { border-color: var(--secondary); transform: translateY(-5px); }
+        .export-controls { text-align: center; margin-bottom: 20px; display: flex; justify-content: center; gap: 10px; }
+
+        /* --- RESUME TEMPLATES (A4 Size, ATS Semantic) --- */
+        #resume-document {
+            width: 210mm; min-height: 297mm; margin: 0 auto; background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1); box-sizing: border-box; color: #000;
+        }
+
+        /* 1. Classic (Single Column, Highly ATS Friendly) */
+        .template-classic { padding: 40px; font-family: 'Times New Roman', serif; }
+        .template-classic header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px; }
+        .template-classic h1 { margin: 0; font-size: 2.5em; text-transform: uppercase; color: #000; }
+        .template-classic .contact-info { font-size: 0.9em; margin-top: 5px; }
+        .template-classic section { margin-bottom: 20px; }
+        .template-classic h2 { text-transform: uppercase; border-bottom: 1px solid #ccc; font-size: 1.2em; color: #000; margin-bottom: 10px; }
+        .template-classic article { margin-bottom: 15px; }
+        .template-classic .flex-row { display: flex; justify-content: space-between; font-weight: bold; }
+
+        /* 2. Modern Split (Two Column Layout) */
+        .template-modern { display: flex; min-height: 297mm; font-family: 'Helvetica Neue', sans-serif; }
+        .template-modern aside { width: 35%; background: #1e293b; color: white; padding: 40px 25px; }
+        .template-modern main { width: 65%; padding: 40px; }
+        .template-modern h1 { color: #fff; font-size: 2.2em; margin-top: 0; }
+        .template-modern aside h2 { color: #94a3b8; border-bottom: 1px solid #475569; padding-bottom: 5px; font-size: 1.1em; text-transform: uppercase; }
+        .template-modern main h2 { color: #0f172a; border-bottom: 2px solid #3b82f6; padding-bottom: 5px; font-size: 1.3em; text-transform: uppercase; }
+        .template-modern .contact-item { font-size: 0.9em; margin-bottom: 8px; word-wrap: break-word; }
+
+        /* 3. Creative Accent */
+        .template-creative { padding: 0; font-family: 'Georgia', serif; }
+        .template-creative header { background: #3b82f6; color: white; padding: 40px; text-align: left; }
+        .template-creative header h1 { margin: 0; font-size: 2.8em; color: white; }
+        .template-creative .contact-bar { background: #1e40af; color: white; padding: 15px 40px; font-size: 0.9em; display: flex; flex-wrap: wrap; gap: 15px; }
+        .template-creative main { padding: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+        .template-creative h2 { color: #3b82f6; font-size: 1.3em; border-bottom: 1px dashed #3b82f6; padding-bottom: 5px; }
+
+        /* Utility Classes for generation */
+        .font-bold { font-weight: bold; }
+        .text-sm { font-size: 0.9em; color: #555; }
+        ul { margin: 5px 0 0 0; padding-left: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="form-container">
+        <h1>Advanced ATS Resume Builder</h1>
+        <form id="resume-form">
+            
+            <div class="form-section">
+                <h2>1. Personal Details</h2>
+                <div class="grid-2">
+                    <div><label>Full Name *</label><input type="text" id="p-name" required></div>
+                    <div><label>Email *</label><input type="email" id="p-email" required></div>
+                    <div><label>Mobile Number *</label><input type="text" id="p-mobile" required></div>
+                    <div><label>Address *</label><input type="text" id="p-address" required></div>
+                    <div>
+                        <label>Languages (Ctrl+Click to select multiple)</label>
+                        <select id="p-languages" multiple style="height: 100px;">
+                            <option value="English">English</option>
+                            <option value="Hindi">Hindi</option>
+                            <option value="Spanish">Spanish</option>
+                            <option value="French">French</option>
+                            <option value="German">German</option>
+                            <option value="Mandarin">Mandarin</option>
+                            <option value="Japanese">Japanese</option>
+                            <option value="Arabic">Arabic</option>
+                            <option value="Russian">Russian</option>
+                            <option value="Portuguese">Portuguese</option>
+                            <option value="Bengali">Bengali</option>
+                            <option value="Urdu">Urdu</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>LinkedIn Link <span class="optional-tag">(Optional)</span></label>
+                        <input type="url" id="p-linkedin">
+                        <label>GitHub Link <span class="optional-tag">(Optional)</span></label>
+                        <input type="url" id="p-github">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2>2. Education Details</h2>
+                
+                <div class="grid-2">
+                    <div class="dynamic-group">
+                        <h3>10th Standard</h3>
+                        <label>Board *</label><input type="text" id="e10-board" required>
+                        <label>School *</label><input type="text" id="e10-school" required>
+                        <label>Completion Date *</label><input type="month" id="e10-date" required>
+                        <label>Percentage/CGPA *</label><input type="text" id="e10-perc" required>
+                        <label>Description <span class="optional-tag">(Optional)</span></label>
+                        <textarea id="e10-desc" rows="2"></textarea>
+                    </div>
+
+                    <div class="dynamic-group">
+                        <h3>12th Standard</h3>
+                        <label>Board *</label><input type="text" id="e12-board" required>
+                        <label>School/College *</label><input type="text" id="e12-school" required>
+                        <label>Stream (e.g., Science, Arts) *</label><input type="text" id="e12-stream" required>
+                        <label>Completion Date *</label><input type="month" id="e12-date" required>
+                        <label>Percentage/CGPA *</label><input type="text" id="e12-perc" required>
+                        <label>Description <span class="optional-tag">(Optional)</span></label>
+                        <textarea id="e12-desc" rows="2"></textarea>
+                    </div>
+                </div>
+
+                <h3>Degree/Diploma Details</h3>
+                <div id="degrees-container">
+                    <div class="dynamic-group degree-entry">
+                        <div class="grid-2">
+                            <div><label>Course Name *</label><input type="text" class="d-course" required></div>
+                            <div><label>College/University *</label><input type="text" class="d-college" required></div>
+                            <div><label>Start Date *</label><input type="month" class="d-start" required></div>
+                            <div><label>Completion Date *</label><input type="month" class="d-end" required></div>
+                            <div><label>SGPA/CGPA *</label><input type="text" class="d-cgpa" required></div>
+                        </div>
+                        <label>Description <span class="optional-tag">(Optional)</span></label>
+                        <textarea class="d-desc" rows="2"></textarea>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-add" onclick="addClone('degrees-container', 'degree-entry')">+ Add Another Degree</button>
+            </div>
+
+            <div class="form-section">
+                <h2>3. Skills</h2>
+                <div class="grid-2">
+                    <div><label>Technical Skills (Comma separated) *</label><textarea id="s-tech" rows="3" required></textarea></div>
+                    <div><label>Soft Skills (Comma separated) *</label><textarea id="s-soft" rows="3" required></textarea></div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2>4. Work Experience</h2>
+                <div id="experience-container">
+                    <div class="dynamic-group exp-entry">
+                        <div class="grid-2">
+                            <div><label>Job Title *</label><input type="text" class="x-title" required></div>
+                            <div><label>Company Details *</label><input type="text" class="x-company" required></div>
+                            <div><label>Start Date *</label><input type="month" class="x-start" required></div>
+                            <div><label>Experience (in months) *</label><input type="number" class="x-months" required></div>
+                        </div>
+                        <label>
+                            Job Description * <button type="button" class="btn btn-ai" onclick="generateAISummary(this)">✨ Enhance with AI</button>
+                        </label>
+                        <textarea class="x-desc" rows="3" required></textarea>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-add" onclick="addClone('experience-container', 'exp-entry')">+ Add Work Experience</button>
+            </div>
+
+            <div class="form-section">
+                <h2>5. College / Personal Projects</h2>
+                <div id="projects-container">
+                    <div class="dynamic-group proj-entry">
+                        <label>Project Title *</label><input type="text" class="pr-title" required>
+                        <label>
+                            Short Description *
+                            <button type="button" class="btn btn-ai" onclick="generateAISummary(this)">✨ Enhance with AI</button>
+                        </label>
+                        <textarea class="pr-desc" rows="3" required></textarea>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-add" onclick="addClone('projects-container', 'proj-entry')">+ Add Project</button>
+            </div>
+
+            <div class="form-section">
+                <h2>6. Extra Courses & Certifications</h2>
+                <div id="certs-container">
+                    <div class="dynamic-group cert-entry">
+                        <label>Course / Certification Name *</label><input type="text" class="c-title" required>
+                        <label>Description / Details <span class="optional-tag">(Optional)</span></label>
+                        <textarea class="c-desc" rows="2"></textarea>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-add" onclick="addClone('certs-container', 'cert-entry')">+ Add Certification</button>
+            </div>
+
+            <div class="form-section">
+                <label style="display: flex; align-items: flex-start; gap: 10px;">
+                    <input type="checkbox" required style="width: auto; margin-top: 5px;">
+                    <span><strong>Self-Declaration:</strong> I hereby declare that the information provided above is true, complete, and correct to the best of my knowledge and belief.</span>
+                </label>
+            </div>
+
+            <button type="submit" class="btn btn-submit">Submit & Choose Template</button>
+        </form>
+    </div>
+
+    <div id="design-selection">
+        <h2>Select Your Resume Template</h2>
+        <div class="design-cards">
+            <div class="card" onclick="buildResume('classic')">
+                <h3>Classic Single Column</h3>
+                <p>Highly ATS-friendly. Best for corporate and formal applications.</p>
+            </div>
+            <div class="card" onclick="buildResume('modern')">
+                <h3>Modern Split</h3>
+                <p>Two-column layout highlighting skills and contacts instantly.</p>
+            </div>
+            <div class="card" onclick="buildResume('creative')">
+                <h3>Creative Accent</h3>
+                <p>Bold headers and distinct sections for design and tech roles.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="resume-output-container">
+        <div class="export-controls">
+            <button class="btn" onclick="exportResume('pdf')">Download PDF</button>
+            <button class="btn" onclick="exportResume('jpeg')">Download JPEG</button>
+            <button class="btn" onclick="exportResume('jpg')">Download JPG</button>
+            <button class="btn" style="background:#64748b;" onclick="location.reload()">Start Over</button>
+        </div>
+        
+        <div id="resume-document"></div>
+    </div>
+</div>
+
+<script>
+    /* =========================================================================
+       1. DYNAMIC FORM HANDLING
+       ========================================================================= */
+    function addClone(containerId, entryClass) {
+        const container = document.getElementById(containerId);
+        const entries = container.getElementsByClassName(entryClass);
+        const clone = entries[0].cloneNode(true);
+        
+        // Clear input values in the clone
+        const inputs = clone.querySelectorAll('input, textarea');
+        inputs.forEach(input => input.value = '');
+        
+        // Add remove button if it doesn't exist
+        if (!clone.querySelector('.remove-btn')) {
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'remove-btn';
+            removeBtn.innerText = 'X';
+            removeBtn.onclick = function() { clone.remove(); };
+            clone.appendChild(removeBtn);
+        }
+        container.appendChild(clone);
+    }
+
+    /* =========================================================================
+       2. CONCEPTUAL AI INTEGRATION
+       ========================================================================= */
+    async function generateAISummary(button) {
+        // Target the textarea right below the button's label
+        const textarea = button.parentElement.nextElementSibling;
+        const originalText = textarea.value;
+
+        if (!originalText) {
+            alert("Please enter some basic text first for the AI to enhance!");
+            return;
+        }
+
+        button.innerText = "Enhancing...";
+        button.disabled = true;
+
+        /* CONCEPTUAL NOTE: In a real app, you would send a POST request to your backend,
+           which securely holds your OpenAI/Gemini API key. 
+           Example Real API Call:
+           
+           const response = await fetch('/api/enhance-text', {
+               method: 'POST', body: JSON.stringify({ text: originalText })
+           });
+           const data = await response.json();
+           textarea.value = data.enhancedText;
+        */
+
+        // Simulating network delay and AI response
+        setTimeout(() => {
+            textarea.value = `[AI ENHANCED]: Spearheaded initiatives leading to a 30% increase in efficiency. ` + originalText;
+            button.innerText = "✨ Enhance with AI";
+            button.disabled = false;
+        }, 1500);
+    }
+
+    /* =========================================================================
+       3. DATA COLLECTION & TEMPLATE ROUTING
+       ========================================================================= */
+    let resumeData = {};
+
+    document.getElementById('resume-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        // Helper to get multiple select values
+        const langSelect = document.getElementById('p-languages');
+        const languages = Array.from(langSelect.selectedOptions).map(opt => opt.value).join(', ');
+
+        // Collect Personal & Base Data
+        resumeData = {
+            personal: {
+                name: document.getElementById('p-name').value,
+                email: document.getElementById('p-email').value,
+                mobile: document.getElementById('p-mobile').value,
+                address: document.getElementById('p-address').value,
+                languages: languages,
+                linkedin: document.getElementById('p-linkedin').valu
