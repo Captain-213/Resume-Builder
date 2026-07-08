@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Advanced ATS-Optimized Resume Builder</title>
     
-    <link rel="manifest" href="manifest.json">
-    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <style>
@@ -97,7 +95,7 @@
             box-shadow: 0 0 10px rgba(0,0,0,0.1); box-sizing: border-box; color: #000;
         }
 
-        /* 1. Classic (Single Column, Highly ATS Friendly) */
+        /* 1. Classic */
         .template-classic { padding: 40px; font-family: 'Times New Roman', serif; }
         .template-classic header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px; }
         .template-classic h1 { margin: 0; font-size: 2.5em; text-transform: uppercase; color: #000; }
@@ -107,7 +105,7 @@
         .template-classic article { margin-bottom: 15px; }
         .template-classic .flex-row { display: flex; justify-content: space-between; font-weight: bold; }
 
-        /* 2. Modern Split (Two Column Layout) */
+        /* 2. Modern Split */
         .template-modern { display: flex; min-height: 297mm; font-family: 'Helvetica Neue', sans-serif; }
         .template-modern aside { width: 35%; background: #1e293b; color: white; padding: 40px 25px; }
         .template-modern main { width: 65%; padding: 40px; }
@@ -124,10 +122,8 @@
         .template-creative main { padding: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
         .template-creative h2 { color: #3b82f6; font-size: 1.3em; border-bottom: 1px dashed #3b82f6; padding-bottom: 5px; }
 
-        /* Utility Classes for generation */
         .font-bold { font-weight: bold; }
         .text-sm { font-size: 0.9em; color: #555; }
-        ul { margin: 5px 0 0 0; padding-left: 20px; }
     </style>
 </head>
 <body>
@@ -147,7 +143,7 @@
                     <div>
                         <label>Languages (Ctrl+Click to select multiple)</label>
                         <select id="p-languages" multiple style="height: 100px;">
-                            <option value="English">English</option>
+                            <option value="English" selected>English</option>
                             <option value="Hindi">Hindi</option>
                             <option value="Spanish">Spanish</option>
                             <option value="French">French</option>
@@ -172,7 +168,6 @@
 
             <div class="form-section">
                 <h2>2. Education Details</h2>
-                
                 <div class="grid-2">
                     <div class="dynamic-group">
                         <h3>10th Standard</h3>
@@ -246,8 +241,7 @@
                     <div class="dynamic-group proj-entry">
                         <label>Project Title *</label><input type="text" class="pr-title" required>
                         <label>
-                            Short Description *
-                            <button type="button" class="btn btn-ai" onclick="generateAISummary(this)">✨ Enhance with AI</button>
+                            Short Description * <button type="button" class="btn btn-ai" onclick="generateAISummary(this)">✨ Enhance with AI</button>
                         </label>
                         <textarea class="pr-desc" rows="3" required></textarea>
                     </div>
@@ -309,19 +303,15 @@
 </div>
 
 <script>
-    /* =========================================================================
-       1. DYNAMIC FORM HANDLING
-       ========================================================================= */
+    /* 1. DYNAMIC FORM HANDLING */
     function addClone(containerId, entryClass) {
         const container = document.getElementById(containerId);
         const entries = container.getElementsByClassName(entryClass);
         const clone = entries[0].cloneNode(true);
         
-        // Clear input values in the clone
         const inputs = clone.querySelectorAll('input, textarea');
         inputs.forEach(input => input.value = '');
         
-        // Add remove button if it doesn't exist
         if (!clone.querySelector('.remove-btn')) {
             const removeBtn = document.createElement('button');
             removeBtn.type = 'button';
@@ -333,11 +323,8 @@
         container.appendChild(clone);
     }
 
-    /* =========================================================================
-       2. CONCEPTUAL AI INTEGRATION
-       ========================================================================= */
-    async function generateAISummary(button) {
-        // Target the textarea right below the button's label
+    /* 2. CONCEPTUAL AI INTEGRATION */
+    function generateAISummary(button) {
         const textarea = button.parentElement.nextElementSibling;
         const originalText = textarea.value;
 
@@ -345,22 +332,9 @@
             alert("Please enter some basic text first for the AI to enhance!");
             return;
         }
-
         button.innerText = "Enhancing...";
         button.disabled = true;
 
-        /* CONCEPTUAL NOTE: In a real app, you would send a POST request to your backend,
-           which securely holds your OpenAI/Gemini API key. 
-           Example Real API Call:
-           
-           const response = await fetch('/api/enhance-text', {
-               method: 'POST', body: JSON.stringify({ text: originalText })
-           });
-           const data = await response.json();
-           textarea.value = data.enhancedText;
-        */
-
-        // Simulating network delay and AI response
         setTimeout(() => {
             textarea.value = `[AI ENHANCED]: Spearheaded initiatives leading to a 30% increase in efficiency. ` + originalText;
             button.innerText = "✨ Enhance with AI";
@@ -368,19 +342,16 @@
         }, 1500);
     }
 
-    /* =========================================================================
-       3. DATA COLLECTION & TEMPLATE ROUTING
-       ========================================================================= */
+    /* 3. DATA COLLECTION & TEMPLATE ROUTING */
     let resumeData = {};
 
     document.getElementById('resume-form').addEventListener('submit', function(e) {
         e.preventDefault();
 
-        // Helper to get multiple select values
+        // Fix: Properly closed all the data collection logic
         const langSelect = document.getElementById('p-languages');
         const languages = Array.from(langSelect.selectedOptions).map(opt => opt.value).join(', ');
 
-        // Collect Personal & Base Data
         resumeData = {
             personal: {
                 name: document.getElementById('p-name').value,
@@ -388,4 +359,34 @@
                 mobile: document.getElementById('p-mobile').value,
                 address: document.getElementById('p-address').value,
                 languages: languages,
-                linkedin: document.getElementById('p-linkedin').valu
+                linkedin: document.getElementById('p-linkedin').value,
+                github: document.getElementById('p-github').value
+            },
+            tenth: {
+                board: document.getElementById('e10-board').value,
+                school: document.getElementById('e10-school').value,
+                date: document.getElementById('e10-date').value,
+                perc: document.getElementById('e10-perc').value,
+                desc: document.getElementById('e10-desc').value
+            },
+            twelfth: {
+                board: document.getElementById('e12-board').value,
+                school: document.getElementById('e12-school').value,
+                stream: document.getElementById('e12-stream').value,
+                date: document.getElementById('e12-date').value,
+                perc: document.getElementById('e12-perc').value,
+                desc: document.getElementById('e12-desc').value
+            },
+            skills: {
+                tech: document.getElementById('s-tech').value,
+                soft: document.getElementById('s-soft').value
+            },
+            degrees: [], experiences: [], projects: [], certs: []
+        };
+
+        document.querySelectorAll('.degree-entry').forEach(el => {
+            resumeData.degrees.push({
+                course: el.querySelector('.d-course').value,
+                college: el.querySelector('.d-college').value,
+                start: el.querySelector('.d-start').value,
+           
